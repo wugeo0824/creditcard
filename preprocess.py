@@ -1,6 +1,6 @@
 import pandas as pd
 import decimal
-
+from sklearn.utils import shuffle
 def main():
     all = pd.DataFrame(pd.read_csv('alldata.csv'))
     all['Y'] = all['Y'].map({1: 'Yes', 0: 'No'})
@@ -29,18 +29,21 @@ def main():
     train_nondefault_df = nondefault_data.head(train_nondefault_count)
     train = pd.concat([train_default_df, train_nondefault_df])
     #print(train)
+    train = shuffle(train)
     train.to_csv('train_class.csv', index=False)
 
     validation_default_df = default_data[train_default_count: train_default_count + validation_default_count]
     validation_nondefault_df = nondefault_data[train_nondefault_count: train_nondefault_count + validation_nondefault_count]
     validation = pd.concat([validation_default_df, validation_nondefault_df])
     # print(validation)
+    validation = shuffle(validation)
     validation.to_csv('validation_class.csv', index=False)
 
     test_default_df = default_data[train_default_count + validation_default_count:]
     test_nondefault_df = nondefault_data[train_nondefault_count + validation_nondefault_count:]
     test = pd.concat([test_default_df, test_nondefault_df])
     # print(test)
+    test = shuffle(test)
     test.to_csv('test_class.csv', index=False)
 
 
