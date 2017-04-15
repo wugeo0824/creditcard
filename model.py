@@ -25,6 +25,16 @@ from sklearn.neural_network import MLPClassifier
 from sklearn.svm import SVC
 from sklearn.svm import LinearSVC
 from sklearn.naive_bayes import GaussianNB
+import defines
+
+D = defines.Data()
+
+def updateD(data):
+    global D
+    D = data
+
+def getDummyFile():
+    return D.SOURCE_DUMMY_1 if D.NO_NOISY else D.SOURCE_DUMMY_2
 
 # Utility function to report best scores
 def report(results, n_top=5):
@@ -39,14 +49,15 @@ def report(results, n_top=5):
             print("")
 
 def readData():
-    dropFields = ['DEFAULT_PAYMENT_NEXT_MONTH', 'ID']
-    all = pd.read_csv('all_data_clean_with_dummy.csv')
-    X = (all.drop(dropFields, axis=1))
-    y = all['DEFAULT_PAYMENT_NEXT_MONTH']
+    dropFields = [D.ATTR, 'ID']
 
-    # split training and test 80% : 20%
-    # training using 5-fold cross validation i.e. validation 20% of the total dataset
-    sss = StratifiedShuffleSplit(test_size=0.2)
+    all = pd.read_csv(getDummyFile())
+    X = (all.drop(dropFields, axis=1))
+    y = all[D.ATTR]
+
+    # split training and test 50% : 50%
+    # training using 5-fold cross validation
+    sss = StratifiedShuffleSplit(test_size=0.5, random_state=10, n_splits=1)
 
     for train_index, test_index in sss.split(X, y):
         X_train, X_test = X.iloc[train_index], X.iloc[test_index]
@@ -65,8 +76,8 @@ def logisticRegression():
     X_train, y_train, X_test, y_test = readData()
 
     # logistic regression
-    lr = LogisticRegression(class_weight='balanced', random_state=10, C=10,
-                            penalty='l2', dual=False,
+    lr = LogisticRegression(class_weight='balanced', random_state=10, C=1,
+                            penalty='l2', dual=True,
                             solver='liblinear', n_jobs=-1
                             )
     lr.fit(X_train, y_train)
@@ -150,6 +161,10 @@ def mlp():
     mlp = MLPClassifier(alpha=1e-5, hidden_layer_sizes=(100,), random_state=10,
                         solver='adam', tol=0.000001, verbose=False, warm_start=False)
     mlp.fit(X_train, y_train)
+
+    scores = cross_val_score(mlp, X_train, y_train, cv=5)
+    print(scores)
+
     predictions = mlp.predict(X_test)
     print(mlp.score(X_test, y_test))
     print(accuracy_score(y_test, predictions))
@@ -169,6 +184,10 @@ def svm():
     svc = LinearSVC(C=0.05, random_state=10, class_weight='balanced'
               )
     svc.fit(X_train, y_train)
+
+    scores = cross_val_score(svc, X_train, y_train, cv=5)
+    print(scores)
+
     predictions = svc.predict(X_test)
     print(svc.score(X_test, y_test))
     print(accuracy_score(y_test, predictions))
@@ -187,6 +206,9 @@ def naiveBayes():
     X_train, y_train, X_test, y_test = readData()
     nb = GaussianNB()
     nb.fit(X_train, y_train)
+    scores = cross_val_score(nb, X_train, y_train, cv=5)
+    print(scores)
+
     predictions = nb.predict(X_test)
     print(nb.score(X_test, y_test))
     print(accuracy_score(y_test, predictions))
@@ -220,7 +242,7 @@ def compareWithROC():
     plt.title('ROC Comparison')
     plt.legend(loc='best')
     plt.show()
-
+    print('Save and close image to continue...')
 
 def main():
     #logisticRegression()
