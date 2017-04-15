@@ -1,65 +1,123 @@
 import pandas as pd
-import decimal
-from sklearn.utils import shuffle
+import defines
+
+total_strange_default = 0
+total_strange_ok = 0
+
+D = defines.Data()
+
+def updateD(data):
+    global D
+    D = data
+
+def checkPayStatus(row):
+    flag = -2
+
+    if row['PAY_0'] == -2:
+        return flag
+
+    for i in range(2, 7):
+        if row['PAY_' + str(i)] == -2:
+            return flag
+
+    return 0
+
+def checkTotalBill(row):
+    global total_strange_default
+    global total_strange_ok
+
+    flag = 0
+    bill = 0
+
+    for i in range(1, 7):
+        bill += float(row['BILL_AMT' + str(i)])
+
+    if row['BILL_AMT1'] == 0 and bill == 0:
+        if row[D.ATTR] == 1:
+            total_strange_default += 1
+            flag = -2
+
+        if row[D.ATTR] == 0:
+            total_strange_ok += 1
+            flag = -2
+
+    return flag
+
+def fixEducation(row):
+    if row['EDUCATION'] > 4:
+        return 4
+
+    return row['EDUCATION']
+
+def cleanData():
+    df = pd.read_csv(D.SOURCE)
+
+    df['PAY_POSSIBLE_WRONG'] = df.apply(checkPayStatus, axis=1)
+    df['BILL_POSSIBLE_WRONG'] = df.apply(checkTotalBill, axis=1)
+
+    df.drop(df[df.PAY_POSSIBLE_WRONG == -2].index, inplace=True)
+    df.drop(df[df.BILL_POSSIBLE_WRONG == -2].index, inplace=True)
+
+    df = df.drop(['PAY_POSSIBLE_WRONG', 'BILL_POSSIBLE_WRONG'], axis=1)
+
+    if D.NO_NOISY:
+        df['EDUCATION'] = df.apply(fixEducation, axis=1)
+        df = df[df['MARRIAGE'] != 0]
+        df = df[df['EDUCATION'] != 0]
+
+    print(total_strange_default)
+    print(total_strange_ok)
+
+    df.to_csv(D.getFile(), index=False)
+
+def readCleanData():
+    return pd.read_csv(D.getFile())
+
+def statistics():
+    df = readCleanData()
+    print('Total records: ')
+    print(df[D.ATTR].count())
+    print('Default sum: ')
+    print(df[D.ATTR].sum())
+
+def createDummyVar():
+    df = readCleanData()
+    df = pd.get_dummies(df, prefix='GENDER_', columns=['SEX'])
+    df = pd.get_dummies(df, prefix='EDUCATION_', columns=['EDUCATION'])
+    df = pd.get_dummies(df, prefix='MARRIAGE_', columns=['MARRIAGE'])
+
+    df.to_csv(D.getDummyFile(), index=False)
+
+# def convert(row, i):
+#     j = str(i)
+#     bill = row['BILL_AMT' + j]
+#     pay = row['PAY_AMT' + j]
+#     if bill <= 0:
+#         return 0
+#     else:
+#         if pay == 0:
+#             return bill
+#         else:
+#             return bill / pay
+#     return 0
+
+#no improvement
+# def featureEngineering():
+#     df = readDataWithDummy()
+#     df['BILL_TO_PAY1'] = df.apply(lambda row: convert(row, 1), axis=1)
+#     df['BILL_TO_PAY2'] = df.apply(lambda row: convert(row, 2), axis=1)
+#     df['BILL_TO_PAY3'] = df.apply(lambda row: convert(row, 3), axis=1)
+#     df['BILL_TO_PAY4'] = df.apply(lambda row: convert(row, 4), axis=1)
+#     df['BILL_TO_PAY5'] = df.apply(lambda row: convert(row, 5), axis=1)
+#     df['BILL_TO_PAY6'] = df.apply(lambda row: convert(row, 6), axis=1)
+#
+#     df.to_csv('all_data_clean_with_dummy_extra.csv', index=False)
 
 def main():
-    train = pd.DataFrame(pd.read_csv('train_class.csv'))
-    train['Y'] = train['Y'].map({'Yes': 1, 'No': 0})
-    train.to_csv('train.csv', index=False)
-
-    validation = pd.DataFrame(pd.read_csv('validation_class.csv'))
-    validation['Y'] = validation['Y'].map({'Yes': 1, 'No': 0})
-    validation.to_csv('validation.csv', index=False)
-
-    test = pd.DataFrame(pd.read_csv('test_class.csv'))
-    test['Y'] = test['Y'].map({'Yes': 1, 'No': 0})
-    test.to_csv('test.csv', index=False)
-#
-# def main():
-#     all = pd.DataFrame(pd.read_csv('alldata.csv'))
-#     all['Y'] = all['Y'].map({1: 'Yes', 0: 'No'})
-#     total = all.shape[0]
-#     #all.to_csv('alldata_class.csv', index=False)
-#
-#     full = pd.DataFrame(pd.read_csv('alldata_class.csv'))
-#
-#     default_data = full.loc[full['Y'] == 'Yes']
-#     nondefault_data = full.loc[full['Y'] == 'No']
-#
-#     default_pct = round((default_data['Y'].value_counts()) / total, 2)
-#     nondefault_pct = 1 - default_pct
-#
-#     print(default_pct)
-#     print(nondefault_pct)
-#
-#     #40% training, 10% validation, 50% test
-#     train_default_count =  int(0.4 * default_pct * total)
-#     train_nondefault_count = int(0.4 * nondefault_pct * total)
-#
-#     validation_default_count = int (0.1 * default_pct * total)
-#     validation_nondefault_count = int(0.1  * nondefault_pct * total)
-#
-#     train_default_df = default_data.head(train_default_count)
-#     train_nondefault_df = nondefault_data.head(train_nondefault_count)
-#     train = pd.concat([train_default_df, train_nondefault_df])
-#     #print(train)
-#     train = shuffle(train)
-#     train.to_csv('train_class.csv', index=False)
-#
-#     validation_default_df = default_data[train_default_count: train_default_count + validation_default_count]
-#     validation_nondefault_df = nondefault_data[train_nondefault_count: train_nondefault_count + validation_nondefault_count]
-#     validation = pd.concat([validation_default_df, validation_nondefault_df])
-#     # print(validation)
-#     validation = shuffle(validation)
-#     validation.to_csv('validation_class.csv', index=False)
-#
-#     test_default_df = default_data[train_default_count + validation_default_count:]
-#     test_nondefault_df = nondefault_data[train_nondefault_count + validation_nondefault_count:]
-#     test = pd.concat([test_default_df, test_nondefault_df])
-#     # print(test)
-#     test = shuffle(test)
-#     test.to_csv('test_class.csv', index=False)
-
+    cleanData()
+    statistics()
+    createDummyVar()
+    #featureEngineering()
 
 if __name__ == '__main__':
     main()
