@@ -55,9 +55,9 @@ def readData():
     X = (all.drop(dropFields, axis=1))
     y = all[D.ATTR]
 
-    # split training and test 80% : 20%
-    # training using 5-fold cross validation i.e. validation 20% of the total dataset
-    sss = StratifiedShuffleSplit(test_size=0.2)
+    # split training and test 50% : 50%
+    # training using 5-fold cross validation
+    sss = StratifiedShuffleSplit(test_size=0.5, random_state=10, n_splits=1)
 
     for train_index, test_index in sss.split(X, y):
         X_train, X_test = X.iloc[train_index], X.iloc[test_index]

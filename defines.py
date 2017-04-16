@@ -7,6 +7,7 @@ class Data:
         self.SOURCE_DUMMY_1 = 'all_clean_dummy_no_noise.csv'
         self.SOURCE_DUMMY_2 = 'all_clean_dummy_has_noise.csv'
         self.NO_NOISY = True
+        self.PCT = 0.1
 
     def getFile(self):
         return self.SOURCE_CLEAN_1 if self.NO_NOISY else self.SOURCE_CLEAN_2
